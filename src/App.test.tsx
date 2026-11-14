@@ -9,11 +9,11 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
-import { bell } from "./audio";
+import { bell, playCue } from "./audio";
 import { freshTimer, start } from "./timer";
 
 vi.mock("./audio", () => ({
-  unlockAudio: vi.fn().mockResolvedValue(undefined),
+  playCue: vi.fn().mockResolvedValue(undefined),
   bell: vi.fn(),
 }));
 const KEY = "zangetsu-minimal-v2";
@@ -28,11 +28,14 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("one timer, one button", () => {
+describe("minimal timer controls", () => {
   it("renders nothing except the time and start button", () => {
     const { container } = render(<App />);
     expect(container.textContent).toBe("25:00Commencer");
-    expect(screen.getAllByRole("button")).toHaveLength(1);
+    expect(screen.getAllByRole("button")).toHaveLength(2);
+    expect(
+      screen.getByRole("button", { name: "Réinitialiser le chrono" }),
+    ).toBeTruthy();
     expect(
       container.querySelector("nav, header, footer, input, canvas, a"),
     ).toBeNull();
@@ -40,16 +43,19 @@ describe("one timer, one button", () => {
   it("starts, pauses, and resumes the same countdown", () => {
     render(<App />);
     fireEvent.click(screen.getByRole("button", { name: "Commencer" }));
+    expect(playCue).toHaveBeenLastCalledWith("start");
     act(() => {
       vi.advanceTimersByTime(65_000);
     });
     expect(screen.getByRole("timer").textContent).toBe("23:55");
     fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+    expect(playCue).toHaveBeenLastCalledWith("pause");
     act(() => {
       vi.advanceTimersByTime(100_000);
     });
     expect(screen.getByRole("timer").textContent).toBe("23:55");
     fireEvent.click(screen.getByRole("button", { name: "Reprendre" }));
+    expect(playCue).toHaveBeenLastCalledWith("resume");
     act(() => {
       vi.advanceTimersByTime(1000);
     });
@@ -63,6 +69,46 @@ describe("one timer, one button", () => {
     render(<App />);
     expect(screen.getByRole("timer").textContent).toBe("23:00");
     expect(screen.getByRole("button", { name: "Pause" })).toBeTruthy();
+  });
+  it("resets the current session, stops it, and persists the reset", () => {
+    const view = render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Commencer" }));
+    act(() => {
+      vi.advanceTimersByTime(65_000);
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Réinitialiser le chrono" }),
+    );
+    expect(screen.getByRole("timer").textContent).toBe("25:00");
+    expect(screen.getByRole("button", { name: "Commencer" })).toBeTruthy();
+    expect(playCue).toHaveBeenLastCalledWith("reset");
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(screen.getByRole("timer").textContent).toBe("25:00");
+    view.unmount();
+    render(<App />);
+    expect(JSON.parse(localStorage.getItem(KEY)!)).toMatchObject({
+      remaining: 1500,
+      deadline: null,
+      completed: 0,
+    });
+  });
+  it("resets a paused break without changing its phase or cycle", () => {
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({ ...freshTimer("short", 2), remaining: 120 }),
+    );
+    render(<App />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Réinitialiser le chrono" }),
+    );
+    expect(screen.getByRole("timer").textContent).toBe("05:00");
+    expect(JSON.parse(localStorage.getItem(KEY)!)).toMatchObject({
+      phase: "short",
+      completed: 2,
+      deadline: null,
+    });
   });
   it("prepares a break without adding new controls or messages", () => {
     localStorage.setItem(

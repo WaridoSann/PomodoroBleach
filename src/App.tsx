@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { bell, unlockAudio } from "./audio";
+import { bell, playCue } from "./audio";
 import {
   formatTime,
   freshTimer,
@@ -65,8 +65,6 @@ export default function App() {
   }, [update]);
 
   const toggle = useCallback(() => {
-    // Unlock on a gesture without delaying a pause for the audio engine.
-    void unlockAudio();
     const time = Date.now();
     const current = timerRef.current;
     const next = settle(current, time);
@@ -74,10 +72,25 @@ export default function App() {
     if (next !== current) {
       update(next);
       bell();
-    } else
+    } else {
+      const cue =
+        current.deadline !== null
+          ? "pause"
+          : current.remaining < current.duration
+            ? "resume"
+            : "start";
       update(
         current.deadline === null ? start(current, time) : pause(current, time),
       );
+      void playCue(cue);
+    }
+  }, [update]);
+
+  const reset = useCallback(() => {
+    const current = timerRef.current;
+    update(freshTimer(current.phase, current.completed));
+    setNow(Date.now());
+    void playCue("reset");
   }, [update]);
 
   useEffect(() => {
@@ -136,20 +149,45 @@ export default function App() {
         >
           {formatTime(seconds)}
         </div>
-        <button type="button" className="timer-button" onClick={toggle}>
-          <svg viewBox="0 0 20 20" width="13" height="13" aria-hidden="true">
-            {running ? (
+        <div className="timer-actions">
+          <button type="button" className="timer-button" onClick={toggle}>
+            <svg viewBox="0 0 20 20" width="13" height="13" aria-hidden="true">
+              {running ? (
+                <path
+                  d="M6 4v12M14 4v12"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                />
+              ) : (
+                <path d="m6 3 11 7-11 7Z" fill="currentColor" />
+              )}
+            </svg>
+            <span>{label}</span>
+          </button>
+          <button
+            type="button"
+            className="timer-button reset-button"
+            aria-label="Réinitialiser le chrono"
+            title="Réinitialiser le chrono"
+            onClick={reset}
+          >
+            <svg
+              viewBox="0 0 20 20"
+              width="16"
+              height="16"
+              fill="none"
+              aria-hidden="true"
+            >
               <path
-                d="M6 4v12M14 4v12"
+                d="M4 7a6.5 6.5 0 1 1-.1 6M4 3v4h4"
                 stroke="currentColor"
-                strokeWidth="2.2"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               />
-            ) : (
-              <path d="m6 3 11 7-11 7Z" fill="currentColor" />
-            )}
-          </svg>
-          <span>{label}</span>
-        </button>
+            </svg>
+          </button>
+        </div>
       </section>
     </main>
   );
