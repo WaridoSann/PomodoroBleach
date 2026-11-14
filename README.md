@@ -2,6 +2,12 @@
 
 Un Pomodoro en français, avec un véritable sabre en 3D au centre de l’expérience. Une direction graphique charbon, ivoire et acier, des transitions monochromes discrètes, et des commandes accessibles sans connaître Bleach.
 
+## Utiliser le site
+
+**https://waridosann.github.io/PomodoroBleach/**
+
+GitHub Actions vérifie et compile l’application, puis publie automatiquement sur GitHub Pages à chaque mise à jour de `main`. Les pull requests exécutent les vérifications sans publier. Le workflow peut aussi être relancé manuellement depuis l’onglet Actions.
+
 ## Démarrer
 
 Node.js **22 ou supérieur** et npm sont nécessaires.
@@ -21,7 +27,7 @@ npm run build  # vérification TypeScript et production dans dist/
 npm run preview
 ```
 
-Le dossier `dist/` peut être hébergé sur un service de sites statiques (GitHub Pages, Netlify, Vercel…). Les chemins relatifs permettent aussi un hébergement sous `/PomodoroBleach/`. Aucun serveur applicatif, compte ou clé API n’est nécessaire. Ce dépôt contient le code ; sa création ne configure pas automatiquement un hébergement.
+Le dossier `dist/` peut aussi être hébergé sur un autre service de sites statiques. Les chemins relatifs permettent un hébergement sous `/PomodoroBleach/`. Aucun serveur applicatif, compte ou clé API n’est nécessaire pour utiliser l’application.
 
 ## Le rituel
 
