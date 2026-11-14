@@ -1,72 +1,21 @@
-export type Mode = "focus" | "short" | "long";
-export type Settings = {
-  focus: number;
-  short: number;
-  long: number;
-  sound: boolean;
-  volume: number;
-  ambient: boolean;
-  muted: boolean;
-  motion: boolean;
-  autoStart: boolean;
-};
-export type Session = {
-  id: string;
-  endedAt: number;
-  seconds: number;
-  task: string;
-  cycleCompleted?: boolean;
-};
+export type Phase = "focus" | "short" | "long";
 export type Timer = {
-  mode: Mode;
+  phase: Phase;
   duration: number;
   remaining: number;
   deadline: number | null;
-  cycle: number;
-  task: string;
+  completed: number;
 };
-export type Data = {
-  settings: Settings;
-  timer: Timer;
-  sessions: Session[];
-  task: string;
-};
-export const DEFAULTS: Settings = {
-  focus: 25,
-  short: 5,
-  long: 20,
-  sound: true,
-  volume: 0.45,
-  muted: false,
-  ambient: false,
-  motion: true,
-  autoStart: false,
-};
-export const LABELS: Record<Mode, string> = {
-  focus: "Concentration",
-  short: "Pause courte",
-  long: "Pause longue",
-};
-export function freshTimer(
-  mode: Mode = "focus",
-  settings = DEFAULTS,
-  cycle = 0,
-): Timer {
+
+const DURATIONS = { focus: 25 * 60, short: 5 * 60, long: 20 * 60 };
+
+export function freshTimer(phase: Phase = "focus", completed = 0): Timer {
   return {
-    mode,
-    duration: settings[mode] * 60,
-    remaining: settings[mode] * 60,
+    phase,
+    duration: DURATIONS[phase],
+    remaining: DURATIONS[phase],
     deadline: null,
-    cycle,
-    task: "",
-  };
-}
-export function freshData(): Data {
-  return {
-    settings: { ...DEFAULTS },
-    timer: freshTimer(),
-    sessions: [],
-    task: "",
+    completed,
   };
 }
 export function remaining(timer: Timer, now: number): number {
@@ -74,146 +23,71 @@ export function remaining(timer: Timer, now: number): number {
     ? timer.remaining
     : Math.max(0, Math.ceil((timer.deadline - now) / 1000));
 }
-export function start(data: Data, now: number): Data {
-  if (data.timer.deadline !== null) return data;
-  return {
-    ...data,
-    timer: {
-      ...data.timer,
-      task:
-        data.timer.remaining === data.timer.duration
-          ? data.task.trim()
-          : data.timer.task,
-      deadline: now + data.timer.remaining * 1000,
-    },
-  };
+export function start(timer: Timer, now: number): Timer {
+  if (timer.deadline !== null) return timer;
+  return { ...timer, deadline: now + timer.remaining * 1000 };
 }
-export function pause(data: Data, now: number): Data {
-  return {
-    ...data,
-    timer: {
-      ...data.timer,
-      remaining: remaining(data.timer, now),
-      deadline: null,
-    },
-  };
+export function pause(timer: Timer, now: number): Timer {
+  return { ...timer, remaining: remaining(timer, now), deadline: null };
 }
-export function complete(data: Data, now: number): Data {
-  if (data.timer.deadline === null || remaining(data.timer, now) > 0)
-    return data;
-  const focus = data.timer.mode === "focus";
-  const cycle = focus
-    ? Math.min(4, data.timer.cycle + 1)
-    : data.timer.mode === "long" || data.timer.cycle >= 4
-      ? 0
-      : data.timer.cycle;
-  const mode: Mode = focus ? (cycle >= 4 ? "long" : "short") : "focus";
-  const timer = freshTimer(mode, data.settings, cycle);
-  const sessions = focus
-    ? [
-        ...data.sessions,
-        {
-          id: `session-${data.timer.deadline}`,
-          endedAt: data.timer.deadline,
-          seconds: data.timer.duration,
-          task: data.timer.task || "Concentration libre",
-          cycleCompleted: cycle === 4,
-        },
-      ].slice(-5000)
-    : data.sessions;
-  const next = { ...data, timer, sessions };
-  // Reconcile one interval only. A sleeping device must never earn unattended sessions.
-  return data.settings.autoStart ? start(next, now) : next;
-}
-export function changeMode(data: Data, mode: Mode): Data {
-  // A new focus block after a completed cycle begins a new cycle.
-  return {
-    ...data,
-    timer: freshTimer(
-      mode,
-      data.settings,
-      mode === "focus" && data.timer.cycle >= 4 ? 0 : data.timer.cycle,
-    ),
-  };
+export function settle(timer: Timer, now: number): Timer {
+  if (timer.deadline === null || remaining(timer, now) > 0) return timer;
+  if (timer.phase === "focus") {
+    const completed = Math.min(4, timer.completed + 1);
+    return freshTimer(completed === 4 ? "long" : "short", completed);
+  }
+  return freshTimer("focus", timer.phase === "long" ? 0 : timer.completed);
 }
 export function formatTime(seconds: number): string {
   return `${Math.floor(seconds / 60)
     .toString()
-    .padStart(2, "0")}:${Math.floor(seconds % 60)
-    .toString()
-    .padStart(2, "0")}`;
+    .padStart(2, "0")}:${(seconds % 60).toString().padStart(2, "0")}`;
 }
-export function dayKey(timestamp: number): string {
-  const d = new Date(timestamp);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-function validNumber(
-  value: unknown,
-  min: number,
-  max: number,
-): value is number {
-  return (
-    typeof value === "number" &&
-    Number.isFinite(value) &&
-    value >= min &&
-    value <= max
-  );
-}
-export function restore(raw: string | null): Data {
-  if (!raw) return freshData();
+export function restore(raw: string | null): Timer {
+  if (!raw) return freshTimer();
   try {
-    const parsed = JSON.parse(raw);
-    const data = freshData();
-    for (const mode of ["focus", "short", "long"] as const) {
-      if (
-        Number.isInteger(parsed.settings?.[mode]) &&
-        validNumber(parsed.settings[mode], 1, 180)
-      )
-        data.settings[mode] = parsed.settings[mode];
-    }
-    for (const key of [
-      "sound",
-      "ambient",
-      "motion",
-      "autoStart",
-      "muted",
-    ] as const) {
-      if (typeof parsed.settings?.[key] === "boolean")
-        data.settings[key] = parsed.settings[key];
-    }
-    if (validNumber(parsed.settings?.volume, 0, 1))
-      data.settings.volume = parsed.settings.volume;
-    data.task =
-      typeof parsed.task === "string" ? parsed.task.slice(0, 160) : "";
-    data.sessions = Array.isArray(parsed.sessions)
-      ? parsed.sessions
-          .filter(
-            (s: Session) =>
-              s &&
-              typeof s.id === "string" &&
-              typeof s.task === "string" &&
-              validNumber(s.seconds, 1, 10800) &&
-              validNumber(s.endedAt, 1, Date.now() + 10800000),
-          )
-          .slice(-5000)
-      : [];
-    const t = parsed.timer;
+    const value = JSON.parse(raw);
+    if (!value || !["focus", "short", "long"].includes(value.phase))
+      return freshTimer();
+    const phase = value.phase as Phase;
+    const duration = DURATIONS[phase];
     if (
-      t &&
-      ["focus", "short", "long"].includes(t.mode) &&
-      validNumber(t.duration, 60, 10800) &&
-      validNumber(t.remaining, 0, t.duration) &&
-      Number.isInteger(t.cycle) &&
-      validNumber(t.cycle, 0, 4) &&
-      (t.deadline === null || validNumber(t.deadline, 1, Date.now() + 10800000))
-    ) {
-      data.timer = {
-        ...t,
-        task: typeof t.task === "string" ? t.task.slice(0, 160) : "",
-      };
-    } else data.timer = freshTimer("focus", data.settings);
-    return data;
+      value.duration !== duration ||
+      !Number.isInteger(value.remaining) ||
+      value.remaining < 0 ||
+      value.remaining > duration
+    )
+      return freshTimer();
+    if (
+      !Number.isInteger(value.completed) ||
+      value.completed < 0 ||
+      value.completed > 4
+    )
+      return freshTimer();
+    if (
+      (phase === "focus" && value.completed >= 4) ||
+      (phase === "short" && (value.completed === 0 || value.completed >= 4)) ||
+      (phase === "long" && value.completed !== 4)
+    )
+      return freshTimer();
+    if (
+      value.deadline !== null &&
+      (typeof value.deadline !== "number" ||
+        !Number.isFinite(value.deadline) ||
+        value.deadline <= 0 ||
+        value.deadline > Date.now() + duration * 1000)
+    )
+      return freshTimer();
+    if (value.remaining === 0 && value.deadline === null)
+      return freshTimer(phase, value.completed);
+    return {
+      phase,
+      duration,
+      remaining: value.remaining,
+      deadline: value.deadline,
+      completed: value.completed,
+    };
   } catch {
-    return freshData();
+    return freshTimer();
   }
 }

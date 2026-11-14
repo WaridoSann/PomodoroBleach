@@ -1,182 +1,116 @@
 // @vitest-environment jsdom
+import { StrictMode } from "react";
 import {
   act,
   cleanup,
   fireEvent,
   render,
   screen,
-  waitFor,
 } from "@testing-library/react";
-import {
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
-import { freshData, start } from "./timer";
+import { bell } from "./audio";
+import { freshTimer, start } from "./timer";
 
-// These interaction checks cover the DOM, not WebGL rendering.
-vi.mock("./SwordView", () => ({
-  default: () => <div data-testid="sword-view" />,
-}));
 vi.mock("./audio", () => ({
-  audio: {
-    unlock: vi.fn().mockResolvedValue(undefined),
-    bell: vi.fn(),
-    ambient: vi.fn(),
-  },
+  unlockAudio: vi.fn().mockResolvedValue(undefined),
+  bell: vi.fn(),
 }));
-vi.mock("./model-store", () => ({
-  readModel: vi.fn().mockResolvedValue(null),
-  saveModel: vi.fn().mockResolvedValue(undefined),
-}));
-
-beforeAll(() => {
-  window.matchMedia = vi
-    .fn()
-    .mockImplementation(() => ({
-      matches: false,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    }));
-  HTMLDialogElement.prototype.showModal = function () {
-    this.setAttribute("open", "");
-  };
-  HTMLDialogElement.prototype.close = function () {
-    this.removeAttribute("open");
-  };
-});
+const KEY = "zangetsu-minimal-v2";
 beforeEach(() => {
   localStorage.clear();
+  vi.clearAllMocks();
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-11-14T12:00:00Z"));
 });
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
 });
 
-describe("Pomodoro interactions", () => {
-  it("starts and pauses, preserving a named task in local storage", async () => {
-    render(<App />);
-    fireEvent.change(
-      screen.getByRole("textbox", { name: "Votre tâche de concentration" }),
-      { target: { value: "Préparer mon examen" } },
-    );
-    fireEvent.click(screen.getByRole("button", { name: /Commencer/ }));
-    await screen.findByRole("button", { name: "Mettre en pause" });
-    const saved = JSON.parse(localStorage.getItem("zangetsu-focus-v1")!);
-    expect(saved.timer.task).toBe("Préparer mon examen");
-    expect(saved.timer.deadline).toBeGreaterThan(Date.now());
-    fireEvent.click(screen.getByRole("button", { name: "Mettre en pause" }));
-    await screen.findByRole("button", { name: /Commencer|Reprendre/ });
-    await waitFor(() =>
-      expect(
-        JSON.parse(localStorage.getItem("zangetsu-focus-v1")!).timer.deadline,
-      ).toBeNull(),
-    );
-  });
-  it("requires confirmation before discarding a running timer and respects cancel", async () => {
-    render(<App />);
-    fireEvent.click(screen.getByRole("button", { name: /Commencer/ }));
-    await screen.findByRole("button", { name: "Mettre en pause" });
-    fireEvent.click(screen.getByRole("button", { name: "Pause courte" }));
-    expect(screen.getByRole("dialog").textContent).toContain(
-      "Changer de mode ?",
-    );
-    fireEvent.click(screen.getByRole("button", { name: "Annuler" }));
-    expect(screen.queryByRole("dialog")).toBeNull();
+describe("one timer, one button", () => {
+  it("renders nothing except the time and start button", () => {
+    const { container } = render(<App />);
+    expect(container.textContent).toBe("25:00Commencer");
+    expect(screen.getAllByRole("button")).toHaveLength(1);
     expect(
-      screen.getByRole("button", { name: "Mettre en pause" }),
-    ).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Pause courte" }));
-    fireEvent.click(screen.getByRole("button", { name: /Confirmer/ }));
-    expect(screen.getByRole("timer").textContent).toContain("05:00");
-    expect(
-      JSON.parse(localStorage.getItem("zangetsu-focus-v1")!).sessions,
-    ).toHaveLength(0);
+      container.querySelector("nav, header, footer, input, canvas, a"),
+    ).toBeNull();
   });
-  it("applies customized durations and restores them after remount", async () => {
-    const view = render(<App />);
-    fireEvent.click(screen.getByRole("button", { name: "Réglages" }));
-    fireEvent.change(
-      screen.getByRole("spinbutton", { name: "Concentration" }),
-      { target: { value: "40" } },
-    );
-    fireEvent.click(screen.getByRole("button", { name: /Enregistrer/ }));
-    expect(screen.getByRole("timer").textContent).toContain("40:00");
-    view.unmount();
+  it("starts, pauses, and resumes the same countdown", () => {
     render(<App />);
-    expect(screen.getByRole("timer").textContent).toContain("40:00");
+    fireEvent.click(screen.getByRole("button", { name: "Commencer" }));
+    act(() => {
+      vi.advanceTimersByTime(65_000);
+    });
+    expect(screen.getByRole("timer").textContent).toBe("23:55");
+    fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+    act(() => {
+      vi.advanceTimersByTime(100_000);
+    });
+    expect(screen.getByRole("timer").textContent).toBe("23:55");
+    fireEvent.click(screen.getByRole("button", { name: "Reprendre" }));
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(screen.getByRole("timer").textContent).toBe("23:54");
   });
-  it("preserves an active timer when settings change", async () => {
+  it("restores a running timer on reload", () => {
+    const first = render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Commencer" }));
+    first.unmount();
+    vi.setSystemTime(Date.now() + 120_000);
     render(<App />);
-    fireEvent.click(screen.getByRole("button", { name: /Commencer/ }));
-    await screen.findByRole("button", { name: "Mettre en pause" });
-    const deadline = JSON.parse(localStorage.getItem("zangetsu-focus-v1")!)
-      .timer.deadline;
-    fireEvent.click(screen.getByRole("button", { name: "Réglages" }));
-    fireEvent.change(
-      screen.getByRole("spinbutton", { name: "Concentration" }),
-      { target: { value: "40" } },
-    );
-    fireEvent.click(screen.getByRole("button", { name: /Enregistrer/ }));
-    expect(
-      JSON.parse(localStorage.getItem("zangetsu-focus-v1")!).timer.deadline,
-    ).toBe(deadline);
-    expect(
-      screen.getByRole("button", { name: "Mettre en pause" }),
-    ).toBeTruthy();
+    expect(screen.getByRole("timer").textContent).toBe("23:00");
+    expect(screen.getByRole("button", { name: "Pause" })).toBeTruthy();
   });
-  it("reconciles an expired saved session once and shows it in the journal", async () => {
-    const data = freshData();
-    data.task = "Mon chapitre";
+  it("prepares a break without adding new controls or messages", () => {
     localStorage.setItem(
-      "zangetsu-focus-v1",
-      JSON.stringify(start(data, Date.now() - 1501_000)),
+      KEY,
+      JSON.stringify(start(freshTimer(), Date.now() - 1_501_000)),
     );
-    render(<App />);
-    expect(screen.getByRole("timer").textContent).toContain("05:00");
-    fireEvent.click(screen.getByRole("button", { name: "Mon journal" }));
-    expect(await screen.findByText("Mon chapitre")).toBeTruthy();
-    expect(
-      JSON.parse(localStorage.getItem("zangetsu-focus-v1")!).sessions,
-    ).toHaveLength(1);
+    const { container } = render(
+      <StrictMode>
+        <App />
+      </StrictMode>,
+    );
+    expect(container.textContent).toBe("05:00Commencer");
+    expect(bell).toHaveBeenCalledTimes(1);
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(bell).toHaveBeenCalledTimes(1);
   });
-  it("stays usable if local storage is unavailable", async () => {
-    const spy = vi
+  it("retains a long break without showing cycle counts", () => {
+    localStorage.setItem(
+      KEY,
+      JSON.stringify(start(freshTimer("focus", 3), Date.now() - 1_500_000)),
+    );
+    const { container } = render(<App />);
+    expect(container.textContent).toBe("20:00Commencer");
+  });
+  it("supports Space without adding any shortcut labels", () => {
+    render(<App />);
+    fireEvent.keyDown(window, { code: "Space" });
+    expect(screen.getByRole("button", { name: "Pause" })).toBeTruthy();
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    fireEvent.keyDown(window, { code: "Space" });
+    expect(screen.getByRole("button", { name: "Reprendre" })).toBeTruthy();
+  });
+  it("remains functional when local persistence is blocked", () => {
+    const blocked = vi
       .spyOn(Storage.prototype, "setItem")
       .mockImplementation(() => {
-        throw new DOMException("Quota", "QuotaExceededError");
+        throw new Error("blocked");
       });
     try {
-      render(<App />);
-      expect(screen.getByRole("status").textContent).toContain(
-        "stockage local est indisponible",
-      );
-      await act(async () => {
-        fireEvent.click(screen.getByRole("button", { name: /Commencer/ }));
-      });
-      expect(
-        screen.getByRole("button", { name: "Mettre en pause" }),
-      ).toBeTruthy();
+      const { container } = render(<App />);
+      fireEvent.click(screen.getByRole("button", { name: "Commencer" }));
+      expect(container.textContent).toBe("25:00Pause");
     } finally {
-      spy.mockRestore();
+      blocked.mockRestore();
     }
-  });
-  it("has a master mute independent of the end bell setting", () => {
-    render(<App />);
-    fireEvent.click(
-      screen.getByRole("button", { name: "Couper tous les sons" }),
-    );
-    return waitFor(() => {
-      const settings = JSON.parse(
-        localStorage.getItem("zangetsu-focus-v1")!,
-      ).settings;
-      expect(settings.muted).toBe(true);
-      expect(settings.sound).toBe(true);
-    });
   });
 });

@@ -1,24 +1,16 @@
 # Ressources et attributions
 
-## Modèle personnel fourni par l’utilisateur — non distribué dans ce dépôt
+## Décor
 
-- **Titre :** fullbring Tensa Zangetsu - BLEACH
-- **Auteur :** worms845 — https://sketchfab.com/worms845
-- **Source :** https://sketchfab.com/3d-models/fullbring-tensa-zangetsu-bleach-e4d0ee747dbc4531abb63d99dc7f9dd7
-- **Licence indiquée dans l’archive :** Sketchfab Standard — https://sketchfab.com/licenses
+L’image `src/assets/sealed-background.png` a été générée pour ce projet à partir des références visuelles fournies par l’utilisateur. Elle représente un sabre inspiré de la forme « sealed » de Zangetsu, dans un sol rocheux et de la brume. Aucun modèle 3D ou texture de l’archive Sketchfab n’est distribué avec l’application.
 
-Le modèle et les textures ne sont pas inclus. Leur import est effectué localement par l’utilisateur. Le code de l’importeur ne confère aucun droit supplémentaire sur ces ressources.
+La cloche est synthétisée avec Web Audio. Aucun extrait musical ou sonore provenant de Bleach n’est inclus.
 
-## Géométrie et audio inclus
-
-La lame affichée sans import est construite par le code de `src/sword-scene.ts`. La cloche et le souffle sont synthétisés avec Web Audio. Aucun extrait musical, voix ou effet sonore provenant de Bleach n’est distribué.
-
-## Dépendances
+## Dépendances distribuées
 
 - React et React DOM — MIT — https://react.dev
-- Three.js — MIT — https://threejs.org
-- fflate — MIT — https://github.com/101arrowz/fflate
-- Lucide — ISC — https://lucide.dev/license
-- Manrope et Space Grotesk — SIL Open Font License 1.1, distribuées via Fontsource — https://fontsource.org
+- Space Grotesk — SIL Open Font License 1.1, via Fontsource — https://fontsource.org
 
-Les textes de licence des dépendances sont disponibles dans leurs paquets npm. Bleach, Ichigo et Tensa Zangetsu appartiennent à leurs ayants droit respectifs. Cette application n’est pas officielle.
+Les textes de licence des dépendances figurent dans leurs paquets npm.
+
+Bleach et Zangetsu appartiennent à leurs ayants droit respectifs. Cette application est un projet de fan indépendant et n’est pas officielle.
