@@ -4,14 +4,14 @@
 
 Un sabre « sealed » planté dans le sol, une brume sombre, un chronomètre centré et deux commandes discrètes. Le manche est enveloppé de tissu blanc, sans garde, avec une bande libre à son extrémité.
 
-L’écran affiche uniquement le temps, **Commencer / Pause / Reprendre** et une icône **reset**. Le chrono est placé au-dessus du manche pour le laisser entièrement visible. Le sabre reste fixe ; des nappes de brume évoluent au ras du sol et autour de la lame. L’animation respecte la préférence système de réduction des mouvements.
+L’écran affiche le temps, **Commencer / Pause / Reprendre** et une icône **reset**. Un petit repère « Pause de 5 min » ou « Pause de 20 min » apparaît uniquement pendant le repos pour le distinguer du travail. Le chrono est placé au-dessus du manche pour le laisser entièrement visible. Le sabre reste fixe ; des nappes de brume évoluent au ras du sol et autour de la lame. L’animation respecte la préférence système de réduction des mouvements.
 
 ## Pomodoro
 
 - 25 minutes de travail, puis 5 minutes de repos.
 - Une pause de 20 minutes remplace la pause courte après quatre sessions terminées.
 - Chaque prochain intervalle attend le clic sur **Commencer**.
-- Le reset remet l’intervalle actuel à sa durée initiale et l’arrête, sans changer sa phase.
+- Le reset revient toujours à une nouvelle session de travail de **25 minutes**, à l’arrêt, même depuis une pause de repos.
 - De petites notes discrètes accompagnent le démarrage, la pause, la reprise et le reset. Elles sont générées avec Web Audio, sans fichier sonore externe.
 - Une cloche douce signale la fin. Elle exige une première interaction et une page ouverte ; les navigateurs peuvent retarder le son en arrière-plan.
 - `Espace` démarre, met en pause ou reprend.

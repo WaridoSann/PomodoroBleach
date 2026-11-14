@@ -88,8 +88,7 @@ export default function App() {
   }, [update]);
 
   const reset = useCallback(() => {
-    const current = timerRef.current;
-    update(freshTimer(current.phase, current.completed));
+    update(freshTimer());
     setNow(Date.now());
     void playCue("reset");
   }, [update]);
@@ -142,6 +141,11 @@ export default function App() {
             : "Temps de repos"
         }
       >
+        {timer.phase !== "focus" && (
+          <span className="phase-note" role="status">
+            Pause de {timer.duration / 60} min
+          </span>
+        )}
         <div
           className="digits"
           role="timer"

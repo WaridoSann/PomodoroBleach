@@ -92,19 +92,22 @@ describe("minimal timer controls", () => {
       completed: 0,
     });
   });
-  it("resets a paused break without changing its phase or cycle", () => {
+  it("identifies a saved break and resets it to 25 minutes of focus", () => {
     localStorage.setItem(
       KEY,
       JSON.stringify({ ...freshTimer("short", 2), remaining: 120 }),
     );
     render(<App />);
+    expect(screen.getByRole("status").textContent).toBe("Pause de 5 min");
     fireEvent.click(
       screen.getByRole("button", { name: "Réinitialiser le chrono" }),
     );
-    expect(screen.getByRole("timer").textContent).toBe("05:00");
+    expect(screen.getByRole("timer").textContent).toBe("25:00");
+    expect(screen.queryByRole("status")).toBeNull();
     expect(JSON.parse(localStorage.getItem(KEY)!)).toMatchObject({
-      phase: "short",
-      completed: 2,
+      phase: "focus",
+      duration: 1500,
+      completed: 0,
       deadline: null,
     });
   });
@@ -118,7 +121,7 @@ describe("minimal timer controls", () => {
         <App />
       </StrictMode>,
     );
-    expect(container.textContent).toBe("05:00Commencer");
+    expect(container.textContent).toBe("Pause de 5 min05:00Commencer");
     expect(bell).toHaveBeenCalledTimes(1);
     act(() => {
       vi.advanceTimersByTime(2000);
@@ -131,7 +134,7 @@ describe("minimal timer controls", () => {
       JSON.stringify(start(freshTimer("focus", 3), Date.now() - 1_500_000)),
     );
     const { container } = render(<App />);
-    expect(container.textContent).toBe("20:00Commencer");
+    expect(container.textContent).toBe("Pause de 20 min20:00Commencer");
   });
   it("supports Space without adding any shortcut labels", () => {
     render(<App />);

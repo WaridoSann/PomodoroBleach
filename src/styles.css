@@ -117,6 +117,17 @@ button {
   text-shadow: 0 2px 36px #00000038;
   user-select: none;
 }
+.phase-note {
+  position: absolute;
+  top: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #a4a8a3;
+  font-size: 11px;
+  line-height: 1.5;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
 .timer-actions {
   display: flex;
   align-items: stretch;
@@ -215,6 +226,13 @@ button {
 @media (min-aspect-ratio: 2/1) {
   .landscape {
     background-size: auto 100%;
+  }
+}
+@media (max-height: 350px) and (min-aspect-ratio: 4/3) {
+  .phase-note {
+    top: auto;
+    bottom: -21px;
+    font-size: 10px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
