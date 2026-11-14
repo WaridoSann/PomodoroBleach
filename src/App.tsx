@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { bell, playCue } from "./audio";
+import Fog from "./Fog";
 import {
   formatTime,
   freshTimer,
@@ -131,7 +132,7 @@ export default function App() {
   return (
     <main className="sanctuary" aria-label="Minuteur Pomodoro">
       <div className="landscape" aria-hidden="true" />
-      <div className="mist" aria-hidden="true" />
+      <Fog />
       <div className="vignette" aria-hidden="true" />
       <section
         className="timer"

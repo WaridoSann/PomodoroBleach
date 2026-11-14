@@ -4,7 +4,7 @@
 
 Un sabre « sealed » planté dans le sol, une brume sombre, un chronomètre centré et deux commandes discrètes. Le manche est enveloppé de tissu blanc, sans garde, avec une bande libre à son extrémité.
 
-L’écran affiche uniquement le temps, **Commencer / Pause / Reprendre** et une icône **reset**. Le décor est fixe et ne se manipule pas. Une brume légère se déplace lentement ; l’animation respecte la préférence système de réduction des mouvements.
+L’écran affiche uniquement le temps, **Commencer / Pause / Reprendre** et une icône **reset**. Le chrono est placé au-dessus du manche pour le laisser entièrement visible. Le sabre reste fixe ; des nappes de brume évoluent au ras du sol et autour de la lame. L’animation respecte la préférence système de réduction des mouvements.
 
 ## Pomodoro
 
@@ -31,7 +31,7 @@ npm test
 npm run build
 ```
 
-Le fond est une image générée à partir des références visuelles fournies, intégrée au build avec un nom de fichier versionné. Il ne contient pas le modèle Sketchfab précédemment envoyé. L’application ne nécessite plus WebGL ni Three.js.
+Le fond est une image générée à partir des références visuelles fournies, intégrée au build avec un nom de fichier versionné. Il ne contient pas le modèle Sketchfab précédemment envoyé. Une couche WebGL indépendante dessine la brume : bruit fractal, turbulence et plusieurs profondeurs de dérive, sans Three.js ni dépendance supplémentaire. Sa résolution et sa cadence sont limitées, et le rendu s’arrête dans un onglet masqué. Une version CSS prend le relais si WebGL est indisponible ; le minuteur reste indépendant de cet effet.
 
 Les tests couvrent les échéances, la pause/reprise, le reset, les pauses Pomodoro, la sauvegarde et les déclenchements des sons depuis les commandes. Le rendu visuel complet dans un navigateur reste à vérifier : aucun outil navigateur n’est disponible dans l’environnement de développement.
 

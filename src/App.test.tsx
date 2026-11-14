@@ -36,9 +36,7 @@ describe("minimal timer controls", () => {
     expect(
       screen.getByRole("button", { name: "Réinitialiser le chrono" }),
     ).toBeTruthy();
-    expect(
-      container.querySelector("nav, header, footer, input, canvas, a"),
-    ).toBeNull();
+    expect(container.querySelector("nav, header, footer, input, a")).toBeNull();
   });
   it("starts, pauses, and resumes the same countdown", () => {
     render(<App />);
